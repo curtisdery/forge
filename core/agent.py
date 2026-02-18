@@ -206,7 +206,7 @@ class CognitiveAgent:
         tags = []
         goal = self.goals.get_focus()
         if goal:
-            words = [w.strip(":.!?,") for w in goal.description.lower().split()[:5]]
+            words = [w.strip(":.!?,") for w in goal.description.lower().split()]
             tags.extend(w for w in words if w.isalpha())
 
         # Retrieve across all tiers
@@ -399,7 +399,7 @@ class CognitiveAgent:
         # Build clean tags (alphanumeric only)
         tags = ["episode", act_step.action_taken or "none"]
         if goal:
-            words = [w.strip(":.!?,") for w in goal.description.lower().split()[:5]]
+            words = [w.strip(":.!?,") for w in goal.description.lower().split()]
             tags.extend(w for w in words if w.isalpha())
 
         # Store episode in working memory, then flush to episodic

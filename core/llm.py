@@ -80,12 +80,13 @@ class AnthropicProvider:
 
     async def extract_strategy(self, episodes: list[dict[str, Any]]) -> dict[str, Any]:
         prompt = (
-            "Analyze these episodes and extract a generalizable strategy.\n\n"
+            "Analyze these episodes from a pipeline debugging agent and extract a generalizable strategy.\n\n"
             f"Episodes:\n{json.dumps(episodes, indent=2)}\n\n"
+            "Focus on mapping: which specific error type → which specific action worked or failed.\n"
             "Return a JSON object with:\n"
-            '- "pattern": situation pattern this strategy applies to\n'
-            '- "actions": recommended action sequence\n'
-            '- "rationale": why this works\n'
+            '- "pattern": specific situation pattern (include the error type, e.g. "ingest_timeout")\n'
+            '- "actions": the single best action for this pattern\n'
+            '- "rationale": why this action is correct for this error type\n'
             '- "confidence": 0-1 how confident in this generalization\n'
             "Return ONLY the JSON object, no other text."
         )
@@ -93,11 +94,14 @@ class AnthropicProvider:
         try:
             return json.loads(text)
         except json.JSONDecodeError:
-            # Try to extract JSON from response
+            # Try to extract first complete JSON object using raw_decode
             start = text.find("{")
-            end = text.rfind("}") + 1
-            if start >= 0 and end > start:
-                return json.loads(text[start:end])
+            if start >= 0:
+                try:
+                    obj, _ = json.JSONDecoder().raw_decode(text, start)
+                    return obj
+                except json.JSONDecodeError:
+                    pass
             return {"pattern": "unknown", "actions": [], "rationale": text, "confidence": 0.3}
 
     async def plan(self, goal: str, context: dict[str, Any] | None = None) -> list[str]:
@@ -105,7 +109,10 @@ class AnthropicProvider:
         prompt = (
             f"Goal: {goal}\n"
             f"Context: {ctx_str}\n\n"
-            "Generate a plan as a JSON array of action names to achieve this goal.\n"
+            "You must choose the single best action from the available_tools list.\n"
+            "IMPORTANT: If learned_strategies contains entries relevant to this specific error type, "
+            "follow them — they are learned from past experience.\n"
+            "Generate a plan as a JSON array with exactly ONE action name from available_tools.\n"
             "Return ONLY the JSON array, no other text."
         )
         text = await self.reason(prompt)
