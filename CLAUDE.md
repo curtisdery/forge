@@ -3,7 +3,7 @@
 ## Project Context
 Cognitive agent architecture addressing the AI-layer gaps in current agentic systems. Six cognitive primitives implemented as architectural components — not prompt engineering. Current AI agents are next-token predictors cosplaying as goal-directed systems. FORGE provides the missing primitives: world models, self-knowledge, mental simulation, online learning, goal persistence, and calibrated uncertainty.
 
-67/67 tests passing. Learning benchmark validated: +80% accuracy improvement over 20 task iterations.
+67/67 tests passing. Mock learning benchmark: +80% accuracy improvement. Live benchmark (Claude Haiku 4.5): 80% early → 100% late, +20% improvement, 90% overall.
 
 ## Quick Start
 ```bash
@@ -11,7 +11,8 @@ cd forge
 python3 -m venv .venv && source .venv/bin/activate
 pip install pytest pytest-asyncio
 python -m pytest tests/ -v          # 67 tests
-python benchmarks/learning_benchmark.py  # Learning curve visualization
+python benchmarks/learning_benchmark.py       # Mock learning curve (no API key needed)
+python benchmarks/learning_benchmark_live.py  # Live benchmark (requires ANTHROPIC_API_KEY)
 ```
 
 ## Architecture
@@ -43,7 +44,8 @@ CognitiveAgent (8-phase cycle)
 - **core/llm.py** — LLMProvider protocol, AnthropicProvider, MockLLMProvider
 - **core/tracer.py** — Span, CognitiveTracer with cycle/phase context managers
 - **tests/** — 67 cognitive behavior tests across 6 test files
-- **benchmarks/learning_benchmark.py** — 20-iteration learning curve validation
+- **benchmarks/learning_benchmark.py** — 20-iteration mock learning curve validation
+- **benchmarks/learning_benchmark_live.py** — Live benchmark against Claude Haiku 4.5 with correctness feedback
 
 ## The Six Cognitive Primitives
 
@@ -73,7 +75,6 @@ CognitiveAgent (8-phase cycle)
 - **test_learning.py** (3) — The acid test: agent learns, strategies accumulate, late accuracy > 50%
 
 ## Next Steps
-- **LLM Integration Testing** — Wire AnthropicProvider with real API key, run benchmark against Claude
 - **Semantic Memory Retrieval** — Replace tag-based matching with embedding-based similarity
 - **Multi-Agent Protocol (FARP)** — Agent-to-agent communication with typed contracts, capability negotiation
 - **Persistent Storage** — Serialize memory/goals to disk for cross-session learning
