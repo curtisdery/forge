@@ -127,23 +127,42 @@ async def run_live_benchmark() -> dict:
         chose_correct = cycle_result.action_taken == correct_action
         elapsed = time.time() - iter_start
 
-        # Correctness feedback: if wrong, inject corrective episode so agent learns
+        # Correctness feedback: if wrong, inject corrective + positive episodes
         if not chose_correct:
             desc_tags = [w.strip(":.!?,") for w in task["description"].lower().split() if w.isalpha()]
+            error_type = task["error"]
+            # Negative episode: record the mistake explicitly
             agent.memory.working.store(
                 content={
                     "action": cycle_result.action_taken,
                     "correct_action": correct_action,
+                    "error_type": error_type,
                     "result": {"success": False, "correction": True},
                     "succeeded": False,
+                    "lesson": f"WRONG: '{cycle_result.action_taken}' does NOT fix {error_type}. "
+                              f"CORRECT: '{correct_action}' is the right fix for {error_type}.",
                     "goal": f"Fix: {task['description']}",
                     "cycle": i,
                 },
-                salience=0.9,
-                tags=["episode", "correction", correct_action] + desc_tags,
+                salience=0.95,
+                tags=["episode", "correction", correct_action, error_type] + desc_tags,
+            )
+            # Positive episode: synthetic success for the correct action
+            agent.memory.working.store(
+                content={
+                    "action": correct_action,
+                    "error_type": error_type,
+                    "result": {"success": True},
+                    "succeeded": True,
+                    "lesson": f"For {error_type} errors, use '{correct_action}'.",
+                    "goal": f"Fix: {task['description']}",
+                    "cycle": i,
+                },
+                salience=0.95,
+                tags=["episode", correct_action, error_type] + desc_tags,
             )
             agent.memory.flush_working_to_episodic(
-                task_tags=["correction", correct_action] + desc_tags
+                task_tags=["correction", correct_action, error_type] + desc_tags
             )
             # Penalize wrong strategies
             wrong_strategies = agent.memory.procedural.retrieve(
